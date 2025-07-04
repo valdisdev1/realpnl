@@ -1,8 +1,18 @@
-
 import { BarChart3, PieChart, LineChart, Activity } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 
 const Analytics = () => {
+  const { user } = useAuth();
+
+  // Get user display name from metadata or email
+  const getUserDisplayName = () => {
+    if (user?.user_metadata?.full_name) {
+      return user.user_metadata.full_name;
+    }
+    return user?.email?.split('@')[0] || 'User';
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -11,6 +21,14 @@ const Analytics = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Advanced Analytics</h1>
           <p className="text-lg text-gray-600">Detailed performance analysis and trading insights</p>
+          {user && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-green-800">
+                Welcome back, <span className="font-semibold">{getUserDisplayName()}</span>! 
+                You have access to exclusive trading analytics.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
