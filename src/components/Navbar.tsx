@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { User, LogOut, Settings } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 
 const Navbar = () => {
   const { user, profile, signOut } = useAuth();
@@ -55,17 +55,9 @@ const Navbar = () => {
     }
   };
 
-  const handleProfileClick = () => {
-    // For now, just navigate to analytics page
-    // You can create a dedicated profile page later
-    navigate('/analytics');
-  };
 
-  const handleSettingsClick = () => {
-    // For now, just navigate to analytics page
-    // You can create a dedicated settings page later
-    navigate('/analytics');
-  };
+
+
 
   const getUserDisplayName = () => {
     if (profile?.full_name) {
@@ -139,15 +131,6 @@ const Navbar = () => {
                       </p>
                     </div>
                   </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleProfileClick}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleSettingsClick}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />

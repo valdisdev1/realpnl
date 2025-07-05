@@ -12,7 +12,7 @@ const Analytics = () => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Get user display name from metadata or email
+  
   const getUserDisplayName = () => {
     if (user?.user_metadata?.full_name) {
       return user.user_metadata.full_name;
@@ -22,17 +22,16 @@ const Analytics = () => {
 
   const handleAddInputClick = () => {
     if (!user) {
-      // Redirect to login if not authenticated
+      
       navigate('/login', { state: { from: { pathname: '/analytics' } } });
       return;
     }
     
-    // Open the modal for authenticated users
+    
     setIsModalOpen(true);
   };
 
   const handleModalSuccess = () => {
-    // You can add any additional logic here when credentials are saved
     console.log('API credentials saved successfully');
   };
 
@@ -42,35 +41,17 @@ const Analytics = () => {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-              <p className="text-lg text-gray-600">Detailed performance analysis and trading insights</p>
-              {user && (
-                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-green-800">
-                    Welcome back, <span className="font-semibold">{getUserDisplayName()}</span>! 
-                    You have access to exclusive trading analytics.
-                  </p>
-                </div>
-              )}
-            </div>
-            
-            {/* Add Input Button */}
-            <div className="flex flex-col items-end space-y-2">
-              {user && (
-                <p className="text-sm text-gray-600">
-                  Signed in as: <span className="font-medium">{getUserDisplayName()}</span>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+            <p className="text-lg text-gray-600">Detailed performance analysis and trading insights</p>
+            {user && (
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-green-800">
+                  Welcome back, <span className="font-semibold">{getUserDisplayName()}</span>! 
+                  You have access to exclusive trading analytics.
                 </p>
-              )}
-              <Button
-                onClick={handleAddInputClick}
-                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Add Input</span>
-              </Button>
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -92,9 +73,21 @@ const Analytics = () => {
           
           {profile?.api_key && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-green-800 text-sm">
-                ✓ API credentials configured
-              </p>
+              <div className="space-y-2">
+                <p className="text-green-800 text-sm font-medium">
+                  ✓ API credentials configured
+                </p>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <div className="flex justify-between">
+                    <span>API Key:</span>
+                    <span className="font-mono">{profile.api_key.substring(0, 5)}••••••••••••••••</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>API Secret:</span>
+                    <span className="font-mono">{profile.api_secret?.substring(0, 5)}••••••••••••••••</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
