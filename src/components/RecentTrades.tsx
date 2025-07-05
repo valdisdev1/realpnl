@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Clock, TrendingUp, TrendingDown, Download, Upload } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { walrusAPI } from '../lib/walrus-api';
 
 interface Trade {
   id: string;
@@ -21,6 +22,7 @@ const RecentTrades = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploadingStates, setUploadingStates] = useState<{ [key: string]: boolean }>({});
+  const [uploadedImages, setUploadedImages] = useState<{ [key: string]: { blobId: string; browserUrl: string; directUrl: string } }>({});
 
   useEffect(() => {
     const fetchRecentTrades = async () => {
@@ -72,6 +74,28 @@ const RecentTrades = () => {
         } else {
           setTrades([]);
 
+        }
+
+        // Fetch existing uploaded images for these trades
+        const tradeIds = tradeRecords?.slice(0, 10).map(t => t.id) || [];
+        if (tradeIds.length > 0) {
+          const { data: imageRecords, error: imageError } = await supabase
+            .from('trade_images')
+            .select('trade_id, ipfs_hash, ipfs_url')
+            .in('trade_id', tradeIds);
+
+          if (!imageError && imageRecords) {
+            const existingImages: { [key: string]: { blobId: string; browserUrl: string; directUrl: string } } = {};
+            imageRecords.forEach(img => {
+              const baseUrl = window.location.origin;
+              existingImages[img.trade_id] = {
+                blobId: img.ipfs_hash,
+                browserUrl: `${baseUrl}/api/walrus-proxy?blobId=${img.ipfs_hash}`,
+                directUrl: `${walrusAPI.getConfig().aggregator}/v1/blobs/${img.ipfs_hash}`
+              };
+            });
+            setUploadedImages(existingImages);
+          }
         }
 
       } catch (err) {
@@ -281,59 +305,68 @@ const RecentTrades = () => {
       // Remove the temporary div
       document.body.removeChild(tempDiv);
       
-      // Convert to blob and upload to IPFS
+      // Convert to blob and upload to Walrus IPFS
       canvas.toBlob(async (blob) => {
         if (blob) {
           try {
-            // Create FormData for upload
-            const formData = new FormData();
-            formData.append('file', blob, `trade-${trade.symbol}-${formattedTime.replace(/[^a-zA-Z0-9]/g, '-')}.png`);
+            // Upload to Walrus IPFS
+            const response = await walrusAPI.storeBlob(
+              blob, 
+              `trade-${trade.symbol}-${formattedTime.replace(/[^a-zA-Z0-9]/g, '-')}.png`,
+              1 // Store for 1 epoch
+            );
             
-            // Upload to IPFS (using a public IPFS service as example)
-            // You can replace this with Walrus API when available
-            const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${import.meta.env.VITE_PINATA_JWT || 'YOUR_PINATA_JWT'}`,
-              },
-              body: formData,
-            });
+            // Get blob information
+            const blobInfo = walrusAPI.getBlobInfo(response);
             
-            if (response.ok) {
-              const result = await response.json();
-              const ipfsHash = result.IpfsHash;
-              const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
-              
+            if (blobInfo) {
               // Store the IPFS hash in your database
               const { error: dbError } = await supabase
                 .from('trade_images')
                 .upsert({
                   trade_id: trade.id,
-                  ipfs_hash: ipfsHash,
-                  ipfs_url: ipfsUrl,
+                  ipfs_hash: blobInfo.blobId,
+                  ipfs_url: blobInfo.browserUrl, // Use browser-friendly URL
                   created_at: new Date().toISOString(),
                   updated_at: new Date().toISOString()
                 });
               
               if (dbError) {
                 console.error('Error saving to database:', dbError);
+                alert('Image uploaded to IPFS but failed to save to database. Please try again.');
               } else {
+                // Store uploaded image info in state for UI display
+                setUploadedImages(prev => ({
+                  ...prev,
+                  [trade.id]: {
+                    blobId: blobInfo.blobId,
+                    browserUrl: blobInfo.browserUrl,
+                    directUrl: blobInfo.gatewayUrl
+                  }
+                }));
+                
+                // Show success message with browser-friendly link
+                alert(`✅ Trade image uploaded to Walrus IPFS!
 
-                alert(`Trade image uploaded to IPFS!\nHash: ${ipfsHash}\nURL: ${ipfsUrl}`);
+📋 Blob ID: ${blobInfo.blobId}
+
+🌐 View in browser: ${blobInfo.browserUrl}
+
+The image is now permanently stored on IPFS and can be viewed in any browser!`);
               }
             } else {
-              throw new Error('Failed to upload to IPFS');
+              throw new Error('Failed to get blob information from Walrus response');
             }
           } catch (uploadError) {
-            console.error('Error uploading to IPFS:', uploadError);
-            alert('Failed to upload to IPFS. Please try again.');
+            console.error('Error uploading to Walrus IPFS:', uploadError);
+            alert('Failed to upload to Walrus IPFS. Please try again.');
           }
         }
       }, 'image/png');
       
     } catch (error) {
       console.error('Error in uploadToIPFS:', error);
-      alert('Error uploading to IPFS. Please try again.');
+      alert('Error uploading to Walrus IPFS. Please try again.');
     } finally {
       setUploadingStates(prev => ({ ...prev, [trade.id]: false }));
     }
@@ -437,6 +470,53 @@ const RecentTrades = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      
+      {/* Display uploaded images */}
+      {Object.keys(uploadedImages).length > 0 && (
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">📸 Uploaded Trade Images</h3>
+          <div className="space-y-3">
+            {Object.entries(uploadedImages).map(([tradeId, imageInfo]) => {
+              const trade = trades.find(t => t.id === tradeId);
+              return (
+                <div key={tradeId} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-blue-600 text-sm font-semibold">📊</span>
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">
+                        {trade ? `${trade.symbol} ${trade.side}` : 'Trade Image'}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Blob ID: {imageInfo.blobId.substring(0, 12)}...
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <a
+                      href={imageInfo.browserUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                    >
+                      🌐 View
+                    </a>
+                    <a
+                      href={imageInfo.directUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors"
+                    >
+                      ⬇️ Download
+                    </a>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
