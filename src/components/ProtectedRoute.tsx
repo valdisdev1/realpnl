@@ -8,25 +8,30 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
 
-  if (isLoading) {
+  console.log('ProtectedRoute: loading:', loading, 'user:', !!user, 'pathname:', location.pathname);
+
+  if (loading) {
+    console.log('ProtectedRoute: Showing loading state');
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-gray-600" />
-          <p className="text-gray-600">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+          <span className="text-gray-600">Loading...</span>
         </div>
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    // Redirect to login page with the current location
+  if (!user) {
+    console.log('ProtectedRoute: No user, redirecting to login');
+    // Redirect to login page with the current location as the "from" parameter
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  console.log('ProtectedRoute: User authenticated, rendering children');
   return <>{children}</>;
 };
 
