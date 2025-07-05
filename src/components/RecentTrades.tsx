@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Clock, TrendingUp, TrendingDown } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 interface Trade {
   id: string;
@@ -152,6 +153,82 @@ const RecentTrades = () => {
     return side === 'Buy' ? 'text-green-600' : 'text-red-600';
   };
 
+  const generateTradePNG = async (trade: Trade) => {
+    try {
+      // Create a temporary div for the image
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.top = '-9999px';
+      tempDiv.style.width = '400px';
+      tempDiv.style.height = '200px';
+      tempDiv.style.backgroundColor = 'white';
+      tempDiv.style.padding = '20px';
+      tempDiv.style.borderRadius = '12px';
+      tempDiv.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+      tempDiv.style.fontFamily = 'Arial, sans-serif';
+      tempDiv.style.color = '#1f2937';
+      
+      const formattedTime = formatTime(trade.updated_time);
+      const formattedPnl = formatCurrency(trade.closed_pnl);
+      const isPositive = trade.closed_pnl >= 0;
+      
+      tempDiv.innerHTML = `
+        <div style="display: flex; flex-direction: column; height: 100%; justify-content: space-between;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 24px; font-weight: bold; color: #374151;">Trade Summary</h2>
+          </div>
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
+              <div style="font-size: 18px; font-weight: bold; color: #374151;">${trade.symbol}</div>
+              <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">${trade.side}</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 24px; font-weight: bold; color: ${isPositive ? '#059669' : '#dc2626'};">
+                ${formattedPnl}
+              </div>
+            </div>
+          </div>
+          
+          <div style="text-align: center; font-size: 14px; color: #6b7280;">
+            ${formattedTime}
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(tempDiv);
+      
+      // Generate the image
+      const canvas = await html2canvas(tempDiv, {
+        backgroundColor: 'white',
+        width: 400,
+        height: 200,
+        scale: 2, // Higher resolution
+      });
+      
+      // Remove the temporary div
+      document.body.removeChild(tempDiv);
+      
+      // Convert to blob and download
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `trade-${trade.symbol}-${formattedTime.replace(/[^a-zA-Z0-9]/g, '-')}.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      }, 'image/png');
+      
+    } catch (error) {
+      console.error('Error generating PNG:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-md p-6 border border-gray-100 mb-8">
@@ -215,13 +292,23 @@ const RecentTrades = () => {
                 </div>
               </div>
               
-              <div className="text-right">
-                <div className={`font-bold text-lg ${trade.closed_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(trade.closed_pnl)}
+              <div className="flex items-center space-x-4">
+                <div className="text-right">
+                  <div className={`font-bold text-lg ${trade.closed_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatCurrency(trade.closed_pnl)}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {formatTime(trade.updated_time)}
+                  </div>
                 </div>
-                <div className="text-sm text-gray-600">
-                  {formatTime(trade.updated_time)}
-                </div>
+                
+                <button
+                  onClick={() => generateTradePNG(trade)}
+                  className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  title="Download trade as PNG"
+                >
+                  <Download className="h-4 w-4" />
+                </button>
               </div>
             </div>
           ))}
