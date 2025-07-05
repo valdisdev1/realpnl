@@ -19,7 +19,7 @@ const Navbar = () => {
 
   const handleSignOut = async () => {
     try {
-      console.log('Navbar: Starting sign out process');
+  
       
       // Clear all local storage and session storage
       localStorage.clear();
@@ -37,7 +37,7 @@ const Navbar = () => {
       // Sign out from auth context
       await signOut();
       
-      console.log('Navbar: Sign out completed, navigating to home');
+      
       
       // Force navigation to home page
       navigate('/', { replace: true });

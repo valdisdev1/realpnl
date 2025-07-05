@@ -28,7 +28,7 @@ const Settings = () => {
   };
 
   const handleModalSuccess = () => {
-    console.log('API credentials saved successfully');
+    
   };
 
   const handleRemoveApiCredentials = async () => {
@@ -53,7 +53,7 @@ const Settings = () => {
         return;
       }
 
-      console.log('API credentials removed successfully');
+      
       
       // Refresh the page to update the UI
       window.location.reload();

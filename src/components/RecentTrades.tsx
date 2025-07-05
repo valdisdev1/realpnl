@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Clock, TrendingUp, TrendingDown, Download } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Download, Upload } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 interface Trade {
@@ -20,6 +20,7 @@ const RecentTrades = () => {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingStates, setUploadingStates] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     const fetchRecentTrades = async () => {
@@ -33,7 +34,7 @@ const RecentTrades = () => {
         setError(null);
 
         // Debug: Log the profile ID we're searching for
-        console.log('Searching for trades with api_id:', profile.id);
+    
         
         // First, let's check what api_id values exist in the database
         const { data: allApiIds, error: apiIdError } = await supabase
@@ -42,7 +43,7 @@ const RecentTrades = () => {
           .order('updated_time', { ascending: false })
           .limit(10);
         
-        console.log('Recent api_ids in database:', allApiIds);
+
         
         // Fetch all trades for the user with a higher limit and proper ordering
         const { data: tradeRecords, error: tradeError } = await supabase
@@ -60,25 +61,17 @@ const RecentTrades = () => {
         }
 
         // Debug: Log all returned records
-        console.log('Total records returned:', tradeRecords?.length || 0);
-        console.log('First 3 records:', tradeRecords?.slice(0, 3));
+
         
         if (tradeRecords && tradeRecords.length > 0) {
           // Data is already sorted by updated_time desc from the database
           // Take only the 10 most recent
           setTrades(tradeRecords.slice(0, 10));
           
-          // Debug: Log the first few trades to see timestamp format
-          console.log('Top 3 most recent trades:', tradeRecords.slice(0, 3).map(t => ({
-            symbol: t.symbol,
-            updated_time: t.updated_time,
-            parsed_time: parseUnixTimestamp(t.updated_time).toISOString(),
-            type: typeof t.updated_time,
-            length: t.updated_time?.toString().length
-          })));
+
         } else {
           setTrades([]);
-          console.log('No trades found for api_id:', profile.id);
+
         }
 
       } catch (err) {
@@ -229,6 +222,123 @@ const RecentTrades = () => {
     }
   };
 
+  const uploadToIPFS = async (trade: Trade) => {
+    try {
+      setUploadingStates(prev => ({ ...prev, [trade.id]: true }));
+      
+      // Create a temporary div for the image (same as generateTradePNG)
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.top = '-9999px';
+      tempDiv.style.width = '400px';
+      tempDiv.style.height = '200px';
+      tempDiv.style.backgroundColor = 'white';
+      tempDiv.style.padding = '20px';
+      tempDiv.style.borderRadius = '12px';
+      tempDiv.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+      tempDiv.style.fontFamily = 'Arial, sans-serif';
+      tempDiv.style.color = '#1f2937';
+      
+      const formattedTime = formatTime(trade.updated_time);
+      const formattedPnl = formatCurrency(trade.closed_pnl);
+      const isPositive = trade.closed_pnl >= 0;
+      
+      tempDiv.innerHTML = `
+        <div style="display: flex; flex-direction: column; height: 100%; justify-content: space-between;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 24px; font-weight: bold; color: #374151;">Trade Summary</h2>
+          </div>
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
+              <div style="font-size: 18px; font-weight: bold; color: #374151;">${trade.symbol}</div>
+              <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">${trade.side}</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 24px; font-weight: bold; color: ${isPositive ? '#059669' : '#dc2626'};">
+                ${formattedPnl}
+              </div>
+            </div>
+          </div>
+          
+          <div style="text-align: center; font-size: 14px; color: #6b7280;">
+            ${formattedTime}
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(tempDiv);
+      
+      // Generate the image
+      const canvas = await html2canvas(tempDiv, {
+        backgroundColor: 'white',
+        width: 400,
+        height: 200,
+        scale: 2, // Higher resolution
+      });
+      
+      // Remove the temporary div
+      document.body.removeChild(tempDiv);
+      
+      // Convert to blob and upload to IPFS
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          try {
+            // Create FormData for upload
+            const formData = new FormData();
+            formData.append('file', blob, `trade-${trade.symbol}-${formattedTime.replace(/[^a-zA-Z0-9]/g, '-')}.png`);
+            
+            // Upload to IPFS (using a public IPFS service as example)
+            // You can replace this with Walrus API when available
+            const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${import.meta.env.VITE_PINATA_JWT || 'YOUR_PINATA_JWT'}`,
+              },
+              body: formData,
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              const ipfsHash = result.IpfsHash;
+              const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+              
+              // Store the IPFS hash in your database
+              const { error: dbError } = await supabase
+                .from('trade_images')
+                .upsert({
+                  trade_id: trade.id,
+                  ipfs_hash: ipfsHash,
+                  ipfs_url: ipfsUrl,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                });
+              
+              if (dbError) {
+                console.error('Error saving to database:', dbError);
+              } else {
+
+                alert(`Trade image uploaded to IPFS!\nHash: ${ipfsHash}\nURL: ${ipfsUrl}`);
+              }
+            } else {
+              throw new Error('Failed to upload to IPFS');
+            }
+          } catch (uploadError) {
+            console.error('Error uploading to IPFS:', uploadError);
+            alert('Failed to upload to IPFS. Please try again.');
+          }
+        }
+      }, 'image/png');
+      
+    } catch (error) {
+      console.error('Error in uploadToIPFS:', error);
+      alert('Error uploading to IPFS. Please try again.');
+    } finally {
+      setUploadingStates(prev => ({ ...prev, [trade.id]: false }));
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-md p-6 border border-gray-100 mb-8">
@@ -302,13 +412,28 @@ const RecentTrades = () => {
                   </div>
                 </div>
                 
-                <button
-                  onClick={() => generateTradePNG(trade)}
-                  className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  title="Download trade as PNG"
-                >
-                  <Download className="h-4 w-4" />
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => generateTradePNG(trade)}
+                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Download trade as PNG"
+                  >
+                    <Download className="h-4 w-4" />
+                  </button>
+                  
+                  <button
+                    onClick={() => uploadToIPFS(trade)}
+                    disabled={uploadingStates[trade.id]}
+                    className={`p-2 rounded-lg transition-colors ${
+                      uploadingStates[trade.id]
+                        ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                        : 'text-gray-500 hover:text-green-600 hover:bg-green-50'
+                    }`}
+                    title="Upload to IPFS for NFT minting"
+                  >
+                    <Upload className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}

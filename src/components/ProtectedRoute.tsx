@@ -11,10 +11,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  console.log('ProtectedRoute: loading:', loading, 'user:', !!user, 'pathname:', location.pathname);
-
   if (loading) {
-    console.log('ProtectedRoute: Showing loading state');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex items-center space-x-2">
@@ -26,12 +23,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!user) {
-    console.log('ProtectedRoute: No user, redirecting to login');
     // Redirect to login page with the current location as the "from" parameter
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-
-  console.log('ProtectedRoute: User authenticated, rendering children');
   return <>{children}</>;
 };
 

@@ -95,6 +95,32 @@ export interface Database {
           updated_time?: string;
         };
       };
+      trade_images: {
+        Row: {
+          id: string;
+          trade_id: string;
+          ipfs_hash: string;
+          ipfs_url: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          trade_id: string;
+          ipfs_hash: string;
+          ipfs_url: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          trade_id?: string;
+          ipfs_hash?: string;
+          ipfs_url?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
   };
 } 
