@@ -7,7 +7,7 @@ interface StatsData {
   totalRealizedPnl: number;
   shortPercentage: number;
   longPercentage: number;
-  totalTrades: number;
+  cumulativeVolume: number;
 }
 
 const HomeStats = () => {
@@ -21,10 +21,10 @@ const HomeStats = () => {
         setLoading(true);
         setError(null);
 
-        // Fetch all PNL data
+        // Fetch all PNL data including cum_entry_value
         const { data: pnlRecords, error: pnlError } = await supabase
           .from('bybit_pnl')
-          .select('closed_pnl, side');
+          .select('closed_pnl, side, cum_entry_value');
 
         if (pnlError) {
           console.error('Error fetching PNL data:', pnlError);
@@ -38,7 +38,7 @@ const HomeStats = () => {
             totalRealizedPnl: 0,
             shortPercentage: 0,
             longPercentage: 0,
-            totalTrades: 0
+            cumulativeVolume: 0
           });
           setLoading(false);
           return;
@@ -46,6 +46,9 @@ const HomeStats = () => {
 
         // Calculate total realized PNL
         const totalRealizedPnl = pnlRecords.reduce((sum, record) => sum + (record.closed_pnl || 0), 0);
+
+        // Calculate cumulative trading volume
+        const cumulativeVolume = pnlRecords.reduce((sum, record) => sum + (record.cum_entry_value || 0), 0);
 
         // Calculate short and long percentages
         const totalTrades = pnlRecords.length;
@@ -59,7 +62,7 @@ const HomeStats = () => {
           totalRealizedPnl,
           shortPercentage,
           longPercentage,
-          totalTrades
+          cumulativeVolume
         });
 
       } catch (err) {
@@ -144,12 +147,12 @@ const HomeStats = () => {
       />
       
       <StatCard
-        title="Total Trades"
-        value={stats.totalTrades.toLocaleString()}
+        title="Cumulative Volume"
+        value={formatCurrency(stats.cumulativeVolume)}
         subtitle="All time"
         icon={<Users className="h-8 w-8" />}
         trend="neutral"
-        trendValue="Total orders"
+        trendValue="Total trading volume"
       />
     </div>
   );
