@@ -65,19 +65,34 @@ export interface Database {
       };
       bybit_pnl: {
         Row: {
+          id: string;
           api_id: string;
           symbol: string;
+          side: 'Buy' | 'Sell';
           closed_pnl: number;
+          avg_entry_price: number;
+          created_time: string;
+          updated_time: string;
         };
         Insert: {
+          id?: string;
           api_id: string;
           symbol: string;
+          side: 'Buy' | 'Sell';
           closed_pnl: number;
+          avg_entry_price: number;
+          created_time?: string;
+          updated_time?: string;
         };
         Update: {
+          id?: string;
           api_id?: string;
           symbol?: string;
+          side?: 'Buy' | 'Sell';
           closed_pnl?: number;
+          avg_entry_price?: number;
+          created_time?: string;
+          updated_time?: string;
         };
       };
     };

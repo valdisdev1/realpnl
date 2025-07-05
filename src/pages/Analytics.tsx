@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import ApiCredentialsModal from '../components/ApiCredentialsModal';
 import PnlAnalytics from '../components/PnlAnalytics';
+import RecentTrades from '../components/RecentTrades';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
@@ -93,6 +94,9 @@ const Analytics = () => {
 
         {/* PNL Analytics */}
         <PnlAnalytics />
+
+        {/* Recent Trades */}
+        <RecentTrades />
 
         {/* API Credentials Modal */}
         <ApiCredentialsModal
