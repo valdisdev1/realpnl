@@ -63,6 +63,23 @@ export interface Database {
           updated_at?: string;
         };
       };
+      bybit_pnl: {
+        Row: {
+          api_id: string;
+          symbol: string;
+          closed_pnl: number;
+        };
+        Insert: {
+          api_id: string;
+          symbol: string;
+          closed_pnl: number;
+        };
+        Update: {
+          api_id?: string;
+          symbol?: string;
+          closed_pnl?: number;
+        };
+      };
     };
   };
 } 
