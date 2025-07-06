@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { TrendingUp, Award, BarChart3 } from 'lucide-react';
+import { TrendingUp, Award, BarChart3, Key, AlertCircle } from 'lucide-react';
+import { hasActiveApiCredentials } from '../lib/utils';
 
 interface PnlData {
   lifetime_pnl: number;
@@ -19,6 +20,12 @@ const PnlAnalytics = () => {
   useEffect(() => {
     const fetchPnlData = async () => {
       if (!profile?.id) {
+        setLoading(false);
+        return;
+      }
+
+      // Check if user has active API credentials
+      if (!hasActiveApiCredentials(profile)) {
         setLoading(false);
         return;
       }
@@ -97,6 +104,34 @@ const PnlAnalytics = () => {
       maximumFractionDigits: 2
     }).format(amount);
   };
+
+  // Show API credentials required message
+  if (profile && !hasActiveApiCredentials(profile)) {
+    return (
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">PNL Analytics</h2>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <div className="flex items-start">
+            <AlertCircle className="h-6 w-6 text-yellow-600 mr-3 mt-0.5" />
+            <div>
+              <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                API Credentials Required
+              </h3>
+              <p className="text-yellow-700 mb-4">
+                To view your PNL analytics, you need to configure your exchange API credentials first.
+              </p>
+              <div className="flex items-center space-x-2">
+                <Key className="h-4 w-4 text-yellow-600" />
+                <span className="text-sm text-yellow-700">
+                  Go to Settings → API Credentials to add your API key
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

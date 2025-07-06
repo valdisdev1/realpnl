@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { DollarSign, TrendingUp, BarChart3, Users } from 'lucide-react';
+import { DollarSign, TrendingUp, BarChart3, Users, Info } from 'lucide-react';
 import StatCard from './StatCard';
 
 interface StatsData {
@@ -118,42 +118,57 @@ const HomeStats = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <StatCard
-        title="Total Realized PNL"
-        value={formatCurrency(stats.totalRealizedPnl)}
-        subtitle="All time"
-        icon={<DollarSign className="h-8 w-8" />}
-        trend={stats.totalRealizedPnl >= 0 ? "up" : "down"}
-        trendValue={stats.totalRealizedPnl >= 0 ? "Positive" : "Negative"}
-      />
-      
-      <StatCard
-        title="Short %"
-        value={formatPercentage(stats.shortPercentage)}
-        subtitle="Sell orders"
-        icon={<TrendingUp className="h-8 w-8" />}
-        trend="neutral"
-        trendValue={`${stats.shortPercentage.toFixed(0)}% of total`}
-      />
-      
-      <StatCard
-        title="Long %"
-        value={formatPercentage(stats.longPercentage)}
-        subtitle="Buy orders"
-        icon={<BarChart3 className="h-8 w-8" />}
-        trend="neutral"
-        trendValue={`${stats.longPercentage.toFixed(0)}% of total`}
-      />
-      
-      <StatCard
-        title="Cumulative Volume"
-        value={formatCurrency(stats.cumulativeVolume)}
-        subtitle="All time"
-        icon={<Users className="h-8 w-8" />}
-        trend="neutral"
-        trendValue="Total trading volume"
-      />
+    <div>
+      {/* Info note about data source */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div className="flex items-start">
+          <Info className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
+          <div>
+            <p className="text-blue-800 text-sm">
+              <strong>Note:</strong> These statistics show all trading data in the system. 
+              For your personal analytics, visit the Dashboard page after configuring your API credentials.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <StatCard
+          title="Total Realized PNL"
+          value={formatCurrency(stats.totalRealizedPnl)}
+          subtitle="All time"
+          icon={<DollarSign className="h-8 w-8" />}
+          trend={stats.totalRealizedPnl >= 0 ? "up" : "down"}
+          trendValue={stats.totalRealizedPnl >= 0 ? "Positive" : "Negative"}
+        />
+        
+        <StatCard
+          title="Short %"
+          value={formatPercentage(stats.shortPercentage)}
+          subtitle="Sell orders"
+          icon={<TrendingUp className="h-8 w-8" />}
+          trend="neutral"
+          trendValue={`${stats.shortPercentage.toFixed(0)}% of total`}
+        />
+        
+        <StatCard
+          title="Long %"
+          value={formatPercentage(stats.longPercentage)}
+          subtitle="Buy orders"
+          icon={<BarChart3 className="h-8 w-8" />}
+          trend="neutral"
+          trendValue={`${stats.longPercentage.toFixed(0)}% of total`}
+        />
+        
+        <StatCard
+          title="Cumulative Volume"
+          value={formatCurrency(stats.cumulativeVolume)}
+          subtitle="All time"
+          icon={<Users className="h-8 w-8" />}
+          trend="neutral"
+          trendValue="Total trading volume"
+        />
+      </div>
     </div>
   );
 };

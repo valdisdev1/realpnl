@@ -30,17 +30,56 @@ const Login = () => {
     setError(null);
     setSuccess(null);
 
+    // Basic validation
+    if (!email || !password) {
+      setError('Please fill in all required fields');
+      setLoading(false);
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
+      setLoading(false);
+      return;
+    }
+
+    // Password validation
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      setLoading(false);
+      return;
+    }
+
     try {
       let result;
       
       if (isSignUp) {
+        console.log('Attempting to create account with email:', email);
         result = await signUp(email, password, fullName);
       } else {
+        console.log('Attempting to sign in with email:', email);
         result = await signIn(email, password);
       }
 
       if (result.error) {
-        setError(result.error.message || 'An error occurred');
+        console.error('Auth error details:', result.error);
+        
+        // Handle specific error cases
+        let errorMessage = result.error.message || 'An error occurred';
+        
+        if (result.error.message?.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password';
+        } else if (result.error.message?.includes('Email not confirmed')) {
+          errorMessage = 'Please check your email and click the confirmation link';
+        } else if (result.error.message?.includes('User already registered')) {
+          errorMessage = 'An account with this email already exists. Please sign in instead.';
+        } else if (result.error.message?.includes('Password should be at least')) {
+          errorMessage = 'Password must be at least 6 characters long';
+        }
+        
+        setError(errorMessage);
       } else {
         if (isSignUp) {
           setSuccess('Account created successfully! Please check your email to verify your account.');
@@ -51,8 +90,8 @@ const Login = () => {
         }
       }
     } catch (err) {
-      setError('An unexpected error occurred');
-      console.error('Auth error:', err);
+      console.error('Unexpected auth error:', err);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }

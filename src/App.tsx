@@ -10,6 +10,7 @@ import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import AuthDebug from "./components/AuthDebug";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            <Route path="/auth-debug" element={<AuthDebug />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

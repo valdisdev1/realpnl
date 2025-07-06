@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Clock, TrendingUp, TrendingDown, Download, Upload } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Download, Upload, Key, AlertCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { walrusAPI } from '../lib/walrus-api';
+import { hasActiveApiCredentials } from '../lib/utils';
 
 interface Trade {
   id: string;
@@ -27,6 +28,12 @@ const RecentTrades = () => {
   useEffect(() => {
     const fetchRecentTrades = async () => {
       if (!profile?.id) {
+        setLoading(false);
+        return;
+      }
+
+      // Check if user has active API credentials
+      if (!hasActiveApiCredentials(profile)) {
         setLoading(false);
         return;
       }
@@ -371,6 +378,37 @@ The image is now permanently stored on IPFS and can be viewed in any browser!`);
       setUploadingStates(prev => ({ ...prev, [trade.id]: false }));
     }
   };
+
+  // Show API credentials required message
+  if (profile && !hasActiveApiCredentials(profile)) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6 border border-gray-100 mb-8">
+        <div className="flex items-center mb-6">
+          <Clock className="h-6 w-6 text-gray-600 mr-2" />
+          <h2 className="text-2xl font-bold text-gray-900">Recent Trades</h2>
+        </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <div className="flex items-start">
+            <AlertCircle className="h-6 w-6 text-yellow-600 mr-3 mt-0.5" />
+            <div>
+              <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                API Credentials Required
+              </h3>
+              <p className="text-yellow-700 mb-4">
+                To view your recent trades, you need to configure your exchange API credentials first.
+              </p>
+              <div className="flex items-center space-x-2">
+                <Key className="h-4 w-4 text-yellow-600" />
+                <span className="text-sm text-yellow-700">
+                  Go to Settings → API Credentials to add your API key
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

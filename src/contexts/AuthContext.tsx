@@ -215,6 +215,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
+      console.log('Attempting sign up with email:', email);
+      
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        console.error('Invalid email format:', email);
+        return { 
+          error: { 
+            message: 'Please enter a valid email address' 
+          } 
+        };
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -227,8 +240,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (error) {
         console.error('AuthProvider: Sign up error:', error);
+        console.error('Error details:', {
+          message: error.message,
+          status: error.status,
+          name: error.name
+        });
         return { error };
       }
+
+      console.log('Sign up successful, user data:', data);
 
       if (data.user) {
         const { error: profileError } = await supabase
